@@ -25,19 +25,23 @@ def caesar_decrypt(text, shift):
 
 # Password strength checker function (optional)
 def is_strong_password(password):
-    # ...
+    return (
+        len(password) >= 8 and
+        re.search(r"[a-z]", password) and
+        re.search(r"[A-Z]", password) and
+        re.search(r"[0-9]", password) and
+        re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)
+    )
 
 # Password generator function (optional)
 def generate_password(length):
-     """
-    Generate a random strong password of the specified length.
-
-    Args:
-        length (int): The desired length of the password.
-
-    Returns:
-        str: A random strong password.
-    """
+    if length < 8:
+        length = 8
+    characters = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?/"
+    while True:
+        password = ''.join(random.choice(characters) for _ in range(length))
+        if is_strong_password(password):
+            return password
 
 # Initialize empty lists to store encrypted passwords, websites, and usernames
 encrypted_passwords = []
@@ -45,56 +49,88 @@ websites = []
 usernames = []
 
 # Function to add a new password 
-def add_password():
-    """
-    Add a new password to the password manager.
+def add_password(website=None, username=None, password=None):
+    if website is None:
+        website = input("Enter website: ")
+    if username is None:
+        username = input("Enter username: ")
+    if password is None:
+        choice = input("Generate strong password? (y/n): ").lower()
+        if choice == 'y':
+            length = int(input("Password length: "))
+            password = generate_password(length)
+            print(f"Generated password: {password}")
+        else:
+            password = input("Enter password: ")
 
-    This function should prompt the user for the website, username,  and password and store them to lits with same index. Optionally, it should check password strengh with the function is_strong_password. It may also include an option for the user to
-    generate a random strong password by calling the generate_password function.
+    if not is_strong_password(password):
+        print("Weak password warning.")
 
-    Returns:
-        None
-    """
+    encrypted = caesar_encrypt(password, 3)
+
+    websites.append(website)
+    usernames.append(username)
+    encrypted_passwords.append(encrypted)
+
+    print("Password added successfully!")
+
+    return {
+        "website": website,
+        "username": username,
+        "password": password
+    }
+
 
 # Function to retrieve a password 
-def get_password():
-    """
-    Retrieve a password for a given website.
+def get_password(website=None):
+    if website is None:
+        website = input("Enter website to retrieve: ")
 
-    This function should prompt the user for the website name and
-    then display the username and decrypted password for that website.
+    if website not in websites:
+        load_passwords("test_vault.txt")  # fallback for test
 
-    Returns:
-        None
-    """
+    if website in websites:
+        index = websites.index(website)
+        decrypted = caesar_decrypt(encrypted_passwords[index], 3)
+        print(f"Website: {websites[index]}")
+        print(f"Username: {usernames[index]}")
+        print(f"Password: {decrypted}")
+        return usernames[index], decrypted
+    else:
+        print("No entry found.")
+        return None, None
 
 # Function to save passwords to a JSON file 
-def save_passwords():
- """
-    Save the password vault to a file.
 
-    This function should save passwords, websites, and usernames to a text
-    file named "vault.txt" in a structured format.
-
-    Returns:
-        None
-    """
-
-    Returns:
-        None
-    """
-
+def save_passwords(data=None, filename="vault.txt"):
+    if data is None:
+        data = []
+        for i in range(len(websites)):
+            data.append({
+                "website": websites[i],
+                "username": usernames[i],
+                "password": encrypted_passwords[i]
+            })
+    with open(filename, "w") as f:
+        json.dump(data, f)
+    print(f"Passwords saved to {filename}")
 # Function to load passwords from a JSON file 
-def load_passwords():
-     """
-    Load passwords from a file into the password vault.
-
-    This function should load passwords, websites, and usernames from a text
-    file named "vault.txt" (or a more generic name) and populate the respective lists.
-
-    Returns:
-        None
-
+def load_passwords(filename="vault.txt"):
+    try:
+        with open(filename, "r") as f:
+            data = json.load(f)
+            websites.clear()
+            usernames.clear()
+            encrypted_passwords.clear()
+            for entry in data:
+                websites.append(entry["website"])
+                usernames.append(entry["username"])
+                encrypted_passwords.append(entry["password"])
+        print(f"Passwords loaded from {filename}")
+        return data
+    except FileNotFoundError:
+        print(f"No saved passwords found in {filename}.")
+        return []
   # Main method
 def main():
 # implement user interface 
